@@ -15,17 +15,20 @@ export type {
 // `VirioClientConfig` was the old name for the constructor options.
 export type { VirioOptions as VirioClientConfig } from "./Virio.js";
 
-// ─── Config loading ──────────────────────────────────────────────────────────
-export { loadConfig, resolveFileConfig, findConfigFile } from "./config.js";
-export type {
-  VirioFileConfig,
-  ChainFileConfig,
-  LoadConfigOptions,
-} from "./config.js";
-
 // ─── ABIs ──────────────────────────────────────────────────────────────────
 export { VIRIO_ABI, ERC20_ABI } from "./abi.js";
 export type { VirioAbi, Erc20Abi } from "./abi.js";
+
+// ─── Errors ─────────────────────────────────────────────────────────────────
+export {
+  VirioError,
+  MissingWalletError,
+  MissingTokenError,
+  MissingAccountError,
+  MissingContractError,
+  EventNotFoundError,
+} from "./errors.js";
+export type { VirioErrorCode } from "./errors.js";
 
 // ─── Webhooks ────────────────────────────────────────────────────────────────
 export { signWebhook, verifyWebhook, buildEvent } from "./webhooks.js";
@@ -69,6 +72,9 @@ export type {
   SubscriptionRole,
   Charge,
   Fees,
+  PreparedTransaction,
+  PreparedCheckout,
+  ListOptions,
   CreatePlanParams,
   SubscribeParams,
   VirioEvent,

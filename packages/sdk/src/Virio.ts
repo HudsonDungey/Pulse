@@ -1,6 +1,7 @@
 import {
   createPublicClient,
   createWalletClient,
+  encodeFunctionData,
   http,
   parseEventLogs,
   type Address,
@@ -14,9 +15,14 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 
 import { VIRIO_ABI, ERC20_ABI } from "./abi.js";
-import { loadConfig } from "./config.js";
 import { resolveChain, usdcAddressFor, type ChainName } from "./chains.js";
 import { computeSubscriptionId, formatUnits } from "./helpers.js";
+import {
+  EventNotFoundError,
+  MissingAccountError,
+  MissingTokenError,
+  MissingWalletError,
+} from "./errors.js";
 import {
   findChargeLogs,
   findPlanCreatedLogs,
@@ -27,8 +33,11 @@ import type {
   Charge,
   CreatePlanParams,
   Fees,
+  ListOptions,
   Plan,
   PlanRecord,
+  PreparedCheckout,
+  PreparedTransaction,
   Subscription,
   SubscribeParams,
   SubscriptionRecord,
@@ -75,18 +84,24 @@ export interface VirioOptions {
 export interface PlansNamespace {
   create(params: CreatePlanParams): Promise<{ txHash: Hash; planId: Hex }>;
   get(planId: Hex): Promise<Plan>;
-  list(merchant?: Address): Promise<PlanRecord[]>;
+  list(merchant?: Address, options?: ListOptions): Promise<PlanRecord[]>;
   deactivate(planId: Hex): Promise<Hash>;
+  prepareCreate(params: CreatePlanParams): PreparedTransaction;
+  prepareDeactivate(planId: Hex): PreparedTransaction;
 }
 
 export interface SubscriptionsNamespace {
   create(params: SubscribeParams): Promise<{ txHash: Hash; subscriptionId: Hex }>;
   subscribe(params: SubscribeParams): Promise<{ txHash: Hash; subscriptionId: Hex }>;
   get(subscriptionId: Hex): Promise<Subscription>;
-  list(address: Address, role?: SubscriptionRole): Promise<SubscriptionRecord[]>;
+  list(address: Address, role?: SubscriptionRole, options?: ListOptions): Promise<SubscriptionRecord[]>;
   cancel(subscriptionId: Hex): Promise<Hash>;
   charge(subscriptionId: Hex): Promise<Hash>;
   isDue(subscriptionId: Hex): Promise<boolean>;
+  prepareSubscribe(params: SubscribeParams): PreparedTransaction;
+  prepareCancel(subscriptionId: Hex): PreparedTransaction;
+  prepareCharge(subscriptionId: Hex): PreparedTransaction;
+  prepareCheckout(params: SubscribeParams, customer?: Address): Promise<PreparedCheckout>;
 }
 
 type ManagerEventName =
@@ -106,13 +121,12 @@ interface WatchedLog {
 // ─── Virio client ─────────────────────────────────────────────────────────────
 
 /**
- * The Virio SDK client. Construct it directly, from a config object, or from a
- * config file:
+ * The Virio SDK client. Construct it directly or from a resolved config object:
  *
  * ```ts
  * import { Virio } from "@virio/sdk";
  *
- * const virio = Virio.fromConfigFile();           // reads ./virio.config.json
+ * const virio = new Virio({ contractAddress, chain, rpcUrl });
  * const balance = await virio.getBalance();        // configured account's USDC
  * const subs = await virio.getSubscriptions(addr); // all subs for an address
  * ```
@@ -167,18 +181,24 @@ export class Virio {
     this.plans = {
       create: (p) => this.createPlan(p),
       get: (id) => this.getPlan(id),
-      list: (merchant) => this.getPlans(merchant),
+      list: (merchant, options) => this.getPlans(merchant, options),
       deactivate: (id) => this.deactivatePlan(id),
+      prepareCreate: (p) => this.prepareCreatePlan(p),
+      prepareDeactivate: (id) => this.prepareDeactivatePlan(id),
     };
     this.products = this.plans;
     this.subscriptions = {
       create: (p) => this.subscribe(p),
       subscribe: (p) => this.subscribe(p),
       get: (id) => this.getSubscription(id),
-      list: (address, role) => this.getSubscriptions(address, role),
+      list: (address, role, options) => this.getSubscriptions(address, role, options),
       cancel: (id) => this.cancel(id),
       charge: (id) => this.charge(id),
       isDue: (id) => this.isDue(id),
+      prepareSubscribe: (p) => this.prepareSubscribe(p),
+      prepareCancel: (id) => this.prepareCancel(id),
+      prepareCharge: (id) => this.prepareCharge(id),
+      prepareCheckout: (p, customer) => this.prepareCheckout(p, customer),
     };
   }
 
@@ -187,15 +207,6 @@ export class Virio {
   /** Build a client from a resolved config object. */
   static fromConfig(config: VirioOptions): Virio {
     return new Virio(config);
-  }
-
-  /**
-   * Build a client from a JSON config file (default: ./virio.config.json).
-   * Pass `{ path }` for a custom location or `{ chain }` to select a chain
-   * from a multi-chain `chains` map.
-   */
-  static fromConfigFile(options: { path?: string; chain?: ChainName | string | number } = {}): Virio {
-    return new Virio(loadConfig(options));
   }
 
   // ─── Reads: point lookups ──────────────────────────────────────────────────
@@ -302,8 +313,12 @@ export class Virio {
    * both (default). Each record merges the `Subscribed` event with the
    * subscription's current on-chain state.
    */
-  async getSubscriptions(address: Address, role: SubscriptionRole = "any"): Promise<SubscriptionRecord[]> {
-    const opts = this.indexerOpts();
+  async getSubscriptions(
+    address: Address,
+    role: SubscriptionRole = "any",
+    options?: ListOptions,
+  ): Promise<SubscriptionRecord[]> {
+    const opts = this.indexerOpts(options);
     const found = new Map<string, { subscriptionId: Hex; planId: Hex }>();
 
     if (role === "customer" || role === "any") {
@@ -331,8 +346,8 @@ export class Virio {
   }
 
   /** List plans, optionally filtered to a single merchant. Reflects current on-chain state. */
-  async getPlans(merchant?: Address): Promise<PlanRecord[]> {
-    const logs = await findPlanCreatedLogs(this.pub, this.contractAddress, { merchant }, this.indexerOpts());
+  async getPlans(merchant?: Address, options?: ListOptions): Promise<PlanRecord[]> {
+    const logs = await findPlanCreatedLogs(this.pub, this.contractAddress, { merchant }, this.indexerOpts(options));
     return Promise.all(
       logs.map(async ({ planId }) => {
         const plan = await this.getPlan(planId);
@@ -345,8 +360,11 @@ export class Virio {
    * Charge (payment) history reconstructed from `ChargeExecuted` logs.
    * Filter by `subscriptionId` and/or `customer`; omit for all charges.
    */
-  async getCharges(filter: { subscriptionId?: Hex; customer?: Address } = {}): Promise<Charge[]> {
-    return findChargeLogs(this.pub, this.contractAddress, filter, this.indexerOpts());
+  async getCharges(
+    filter: { subscriptionId?: Hex; customer?: Address } = {},
+    options?: ListOptions,
+  ): Promise<Charge[]> {
+    return findChargeLogs(this.pub, this.contractAddress, filter, this.indexerOpts(options));
   }
 
   // ─── Writes (require a wallet) ──────────────────────────────────────────────
@@ -365,7 +383,7 @@ export class Virio {
     const receipt = await this.pub.waitForTransactionReceipt({ hash: txHash });
     const logs = parseEventLogs({ abi: VIRIO_ABI, logs: receipt.logs });
     const created = logs.find((l) => l.eventName === "PlanCreated");
-    if (!created) throw new Error("Virio: PlanCreated event not found in receipt");
+    if (!created) throw new EventNotFoundError("PlanCreated");
     return { txHash, planId: (created.args as unknown as { planId: Hex }).planId };
   }
 
@@ -453,6 +471,97 @@ export class Virio {
     return txHash;
   }
 
+  // ─── Prepare: deterministic, side-effect-free planning ─────────────────────
+  //
+  // These build the exact transactions a write would send, without signing or
+  // touching the chain (except `prepareCheckout`, which reads allowance + plan).
+  // They let agents and tools inspect calldata, fees, and the expected
+  // subscription id before committing a signature.
+
+  /** Calldata for `createPlan`. The signer becomes the plan's merchant. */
+  prepareCreatePlan(params: CreatePlanParams): PreparedTransaction {
+    return this.encodeManagerTx(
+      "createPlan",
+      [this.requireToken(params.token), params.amount, params.period],
+      "Create plan",
+    );
+  }
+
+  /** Calldata for `deactivatePlan`. Callable by the plan's merchant. */
+  prepareDeactivatePlan(planId: Hex): PreparedTransaction {
+    return this.encodeManagerTx("deactivatePlan", [planId], "Deactivate plan");
+  }
+
+  /** Calldata for `subscribe`. Requires a prior token approval — see `prepareCheckout`. */
+  prepareSubscribe(params: SubscribeParams): PreparedTransaction {
+    return this.encodeManagerTx(
+      "subscribe",
+      [params.planId, params.totalSpendCap ?? 0n],
+      "Subscribe to plan",
+    );
+  }
+
+  /** Calldata for `cancel`. Callable by the customer or the merchant. */
+  prepareCancel(subscriptionId: Hex): PreparedTransaction {
+    return this.encodeManagerTx("cancel", [subscriptionId], "Cancel subscription");
+  }
+
+  /** Calldata for `charge`. Permissionless — any wallet may send it. */
+  prepareCharge(subscriptionId: Hex): PreparedTransaction {
+    return this.encodeManagerTx("charge", [subscriptionId], "Charge subscription");
+  }
+
+  /** Calldata for an ERC-20 `approve` of the Virio contract (or `spender`). */
+  prepareApprove(amount: bigint, token?: Address, spender?: Address): PreparedTransaction {
+    const tok = this.requireToken(token);
+    return {
+      to: tok,
+      data: encodeFunctionData({
+        abi: ERC20_ABI,
+        functionName: "approve",
+        args: [spender ?? this.contractAddress, amount],
+      }),
+      value: 0n,
+      label: "Approve token allowance",
+      functionName: "approve",
+      args: [spender ?? this.contractAddress, amount],
+    };
+  }
+
+  /**
+   * Plan a full checkout for `customer` (defaults to the configured account):
+   * the required allowance, whether an approval is needed, the exact ordered
+   * transactions to send, and the subscription id the subscribe will produce.
+   * The only side effect is two reads (the plan and the current allowance).
+   *
+   * `requiredAllowance` is the subscription's spend cap when set, otherwise a
+   * single charge — enough to subscribe and cover the first charge. Unlimited
+   * subscriptions need a larger allowance for subsequent charges.
+   */
+  async prepareCheckout(params: SubscribeParams, customer?: Address): Promise<PreparedCheckout> {
+    const account = this.requireAccount(customer);
+    const plan = await this.getPlan(params.planId);
+    const requiredAllowance =
+      params.totalSpendCap && params.totalSpendCap > 0n ? params.totalSpendCap : plan.amount;
+    const currentAllowance = await this.getAllowance(account, this.contractAddress, plan.token);
+    const needsApproval = currentAllowance < requiredAllowance;
+
+    const transactions: PreparedTransaction[] = [];
+    if (needsApproval) transactions.push(this.prepareApprove(requiredAllowance, plan.token));
+    transactions.push(this.prepareSubscribe(params));
+
+    return {
+      planId: params.planId,
+      customer: account,
+      subscriptionId: computeSubscriptionId(params.planId, account),
+      token: plan.token,
+      requiredAllowance,
+      currentAllowance,
+      needsApproval,
+      transactions,
+    };
+  }
+
   // ─── Event hooks (local listeners over RPC) ────────────────────────────────
 
   /**
@@ -471,39 +580,47 @@ export class Virio {
 
   // ─── Internals ─────────────────────────────────────────────────────────────
 
+  /** Encode a non-payable manager call into a `PreparedTransaction`. */
+  private encodeManagerTx(
+    functionName: string,
+    args: readonly unknown[],
+    label: string,
+  ): PreparedTransaction {
+    return {
+      to: this.contractAddress,
+      data: encodeFunctionData({ abi: VIRIO_ABI, functionName, args } as never),
+      value: 0n,
+      label,
+      functionName,
+      args,
+    };
+  }
+
   private async signer(): Promise<{ wal: WalletClient<Transport, Chain>; account: Address }> {
-    if (!this.wal) {
-      throw new Error(
-        "Virio: a wallet is required for write operations. Pass `privateKey` or `walletClient` " +
-          "to the Virio config (or set VIRIO_PRIVATE_KEY).",
-      );
-    }
+    if (!this.wal) throw new MissingWalletError();
     const account = this.wal.account?.address ?? (await this.wal.getAddresses())[0];
-    if (!account) throw new Error("Virio: wallet client has no available account.");
+    if (!account) throw new MissingAccountError();
     return { wal: this.wal, account };
   }
 
   private requireToken(token?: Address): Address {
     const tok = token ?? this.usdc;
-    if (!tok) {
-      throw new Error(
-        "Virio: no token address. Configure `usdcAddress` for this chain, or pass a token explicitly.",
-      );
-    }
+    if (!tok) throw new MissingTokenError();
     return tok;
   }
 
   private requireAccount(account?: Address): Address {
     const addr = account ?? this.account;
-    if (!addr) {
-      throw new Error(
-        "Virio: no account to read. Configure `account` (or a wallet), or pass an address explicitly.",
-      );
-    }
+    if (!addr) throw new MissingAccountError();
     return addr;
   }
 
-  private indexerOpts(): IndexerOptions {
-    return { fromBlock: this.deploymentBlock };
+  private indexerOpts(options?: ListOptions): IndexerOptions {
+    return {
+      fromBlock: options?.fromBlock ?? this.deploymentBlock,
+      toBlock: options?.toBlock,
+      maxRange: options?.maxRange,
+      limit: options?.limit,
+    };
   }
 }

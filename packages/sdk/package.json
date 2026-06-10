@@ -7,29 +7,39 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
       "types": "./dist/index.d.ts",
-      "default": "./src/index.ts"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./react": {
-      "import": "./dist/react/index.js",
       "types": "./dist/react/index.d.ts",
-      "default": "./src/react/index.ts"
+      "import": "./dist/react/index.js",
+      "default": "./dist/react/index.js"
     },
     "./vanilla": {
-      "import": "./dist/vanilla/index.js",
       "types": "./dist/vanilla/index.d.ts",
-      "default": "./src/vanilla/index.ts"
+      "import": "./dist/vanilla/index.js",
+      "default": "./dist/vanilla/index.js"
     },
     "./checkout": {
-      "import": "./dist/checkout/index.js",
       "types": "./dist/checkout/index.d.ts",
-      "default": "./src/checkout/index.ts"
+      "import": "./dist/checkout/index.js",
+      "default": "./dist/checkout/index.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js",
+      "default": "./dist/node.js"
     }
   },
+  "files": [
+    "dist",
+    "src"
+  ],
   "scripts": {
     "build": "tsc --project tsconfig.json",
-    "typecheck": "tsc --project tsconfig.json --noEmit"
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "prepublishOnly": "tsc --project tsconfig.json"
   },
   "dependencies": {
     "@walletconnect/ethereum-provider": "^2.11.0",

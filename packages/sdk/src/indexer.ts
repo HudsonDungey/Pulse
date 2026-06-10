@@ -18,8 +18,11 @@ const EVENT = {
 
 export interface IndexerOptions {
   fromBlock?: bigint;
+  toBlock?: bigint;
   /** Largest block span per getLogs call (default 500). */
   maxRange?: bigint;
+  /** Stop after this many matching logs. */
+  limit?: number;
 }
 
 type DecodedLog = {
@@ -37,13 +40,14 @@ async function getLogsPaged(
   opts: IndexerOptions,
 ): Promise<DecodedLog[]> {
   const head = await pub.getBlockNumber();
+  const toBlock = opts.toBlock === undefined || opts.toBlock > head ? head : opts.toBlock;
   const maxRange = opts.maxRange ?? DEFAULT_MAX_RANGE;
   let cursor = opts.fromBlock ?? 0n;
   if (cursor < 0n) cursor = 0n;
 
   const out: DecodedLog[] = [];
-  while (cursor <= head) {
-    const end = cursor + maxRange - 1n < head ? cursor + maxRange - 1n : head;
+  while (cursor <= toBlock) {
+    const end = cursor + maxRange - 1n < toBlock ? cursor + maxRange - 1n : toBlock;
     const logs = await pub.getLogs({
       address: contractAddress,
       event: event as never,
@@ -52,6 +56,7 @@ async function getLogsPaged(
       toBlock: end,
     });
     out.push(...(logs as unknown as DecodedLog[]));
+    if (opts.limit !== undefined && out.length >= opts.limit) return out.slice(0, opts.limit);
     cursor = end + 1n;
   }
   return out;

@@ -67,6 +67,45 @@ export interface Fees {
   feeRecipient: Address;
 }
 
+// ─── Tool-friendly planning types ────────────────────────────────────────────
+
+export interface PreparedTransaction {
+  /** Contract or token receiving the transaction. */
+  to: Address;
+  /** Encoded calldata, ready for any EVM wallet/client. */
+  data: Hex;
+  /** ETH value. Virio contract calls are currently non-payable. */
+  value: bigint;
+  /** Human-readable operation name. */
+  label: string;
+  /** Contract function encoded in `data`. */
+  functionName: string;
+  /** Original function args for tools that want to inspect before sending. */
+  args: readonly unknown[];
+}
+
+export interface PreparedCheckout {
+  planId: Hex;
+  customer: Address;
+  subscriptionId: Hex;
+  token: Address;
+  requiredAllowance: bigint;
+  currentAllowance: bigint;
+  needsApproval: boolean;
+  transactions: PreparedTransaction[];
+}
+
+export interface ListOptions {
+  /** Start block for this query. Defaults to the client's deploymentBlock. */
+  fromBlock?: bigint;
+  /** End block for this query. Defaults to latest. */
+  toBlock?: bigint;
+  /** Largest block span per getLogs call. */
+  maxRange?: bigint;
+  /** Stop after this many matching logs. */
+  limit?: number;
+}
+
 // ─── Call params ──────────────────────────────────────────────────────────────
 
 export interface CreatePlanParams {
