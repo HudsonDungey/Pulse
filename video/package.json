@@ -1,0 +1,24 @@
+{
+  "name": "virio-manifesto-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cinematic Remotion manifesto video for Virio — onchain recurring payments",
+  "scripts": {
+    "dev": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts VirioManifesto out/virio-manifesto.mp4",
+    "render:vertical": "remotion render src/index.ts VirioManifestoVertical out/virio-manifesto-vertical.mp4",
+    "render:instagram": "remotion render src/index.ts VirioInstagram out/virio-instagram-45.mp4",
+    "render:provocation": "remotion render src/index.ts VirioProvocation out/virio-provocation.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.290",
+    "@remotion/google-fonts": "4.0.474",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.290"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "typescript": "^5.4.0"
+  }
+}
