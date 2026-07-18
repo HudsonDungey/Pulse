@@ -16,3 +16,7 @@ contracts/.env
 .DS_Store
 tsconfig.tsbuildinfo
 packages/*/tsconfig.tsbuildinfo
+
+# Yarn (keep .yarn/releases committed — it pins the yarn version everywhere)
+.yarn/install-state.gz
+.yarn/cache/
