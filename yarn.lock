@@ -1811,12 +1811,31 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@solana-program/compute-budget@npm:^0.11.0":
+  version: 0.11.0
+  resolution: "@solana-program/compute-budget@npm:0.11.0"
+  peerDependencies:
+    "@solana/kit": ^5.0
+  checksum: 10c0/6d677fa0d48e51fe99f54833e61fee75b3acd75f556d5c06bf39b12bba4c782f3c69aa567939b0184a994794faac548c7c56b1c97a989bde31bbb3c130b4be05
+  languageName: node
+  linkType: hard
+
 "@solana-program/system@npm:^0.10.0":
   version: 0.10.0
   resolution: "@solana-program/system@npm:0.10.0"
   peerDependencies:
     "@solana/kit": ^5.0
   checksum: 10c0/4cc3164d49fe7b10e9c0c89493f738e2d4294e2eae40fafee56b01dfb50b939c88f82eb06d5393333743b0edee961b03e947afcc20e6965252576900266ec52e
+  languageName: node
+  linkType: hard
+
+"@solana-program/token-2022@npm:^0.6.1":
+  version: 0.6.1
+  resolution: "@solana-program/token-2022@npm:0.6.1"
+  peerDependencies:
+    "@solana/kit": ^5.0
+    "@solana/sysvars": ^5.0
+  checksum: 10c0/bc9af5b18df2e87c256c05dd4f575cb94767ad770753b4c6979aca81c864ba034eb9d591be9933f93e16d5b7dd6f28da4055348a6ffa93a4ab72d4bf6fe14092
   languageName: node
   linkType: hard
 
@@ -3023,6 +3042,8 @@ __metadata:
     "@types/node": "npm:^20.0.0"
     "@types/react": "npm:^18.3.3"
     "@types/react-dom": "npm:^18.3.0"
+    "@x402/core": "npm:^2.19.0"
+    "@x402/svm": "npm:^2.19.0"
     autoprefixer: "npm:^10.4.20"
     class-variance-authority: "npm:^0.7.0"
     clsx: "npm:^2.1.1"
@@ -3766,6 +3787,29 @@ __metadata:
     "@walletconnect/window-getters": "npm:^1.0.1"
     tslib: "npm:1.14.1"
   checksum: 10c0/f190e9bed77282d8ba868a4895f4d813e135f9bbecb8dd4aed988ab1b06992f78128ac19d7d073cf41d8a6a74d0c055cd725908ce0a894649fd25443ad934cf4
+  languageName: node
+  linkType: hard
+
+"@x402/core@npm:^2.19.0, @x402/core@npm:~2.19.0":
+  version: 2.19.0
+  resolution: "@x402/core@npm:2.19.0"
+  dependencies:
+    zod: "npm:^3.24.2"
+  checksum: 10c0/ee631dc4b326d557e1b0d49e6af3649c2d98a63ce6a9966f7f4bb5b848a93f95bfa76d370c6eadc3d2beb03191715fa992f963fee2df08769d9428e3fde6a13b
+  languageName: node
+  linkType: hard
+
+"@x402/svm@npm:^2.19.0":
+  version: 2.19.0
+  resolution: "@x402/svm@npm:2.19.0"
+  dependencies:
+    "@solana-program/compute-budget": "npm:^0.11.0"
+    "@solana-program/token": "npm:^0.9.0"
+    "@solana-program/token-2022": "npm:^0.6.1"
+    "@x402/core": "npm:~2.19.0"
+  peerDependencies:
+    "@solana/kit": ">=5.1.0"
+  checksum: 10c0/0ae959188b76dd96080d163c17024cc023ef56551c44632d09f350417bfe515dc193357dc952b12ad7bf43889ce5b0690dbd10961d93174a2e12c7288667529a
   languageName: node
   linkType: hard
 
@@ -10873,7 +10917,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:^3.25.76":
+"zod@npm:^3.24.2, zod@npm:^3.25.76":
   version: 3.25.76
   resolution: "zod@npm:3.25.76"
   checksum: 10c0/5718ec35e3c40b600316c5b4c5e4976f7fee68151bc8f8d90ec18a469be9571f072e1bbaace10f1e85cf8892ea12d90821b200e980ab46916a6166a4260a983c
