@@ -13,6 +13,11 @@ const nextConfig = {
     config.resolve.alias = {
       ...(config.resolve.alias ?? {}),
       "@react-native-async-storage/async-storage": false,
+      // WalletConnect / Coinbase Base Account pull Pino's optional pretty
+      // printer into the dependency graph. It is a Node dev dependency, not
+      // needed in the browser wallet flow, and some deploy builders fail when
+      // webpack tries to resolve it.
+      "pino-pretty": false,
     };
     return config;
   },
