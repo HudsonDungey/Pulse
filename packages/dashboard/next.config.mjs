@@ -18,11 +18,6 @@ const nextConfig = {
       // needed in the browser wallet flow, and some deploy builders fail when
       // webpack tries to resolve it.
       "pino-pretty": false,
-      // Coinbase CDP / Base Account include optional x402 payment helpers.
-      // The dashboard only uses Coinbase as a wallet connector, so these
-      // payment-specific client packages should not be required for builds.
-      "@x402/core/client": false,
-      "@x402/svm/exact/client": false,
     };
     return config;
   },
