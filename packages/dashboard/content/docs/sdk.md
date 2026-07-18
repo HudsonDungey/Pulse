@@ -13,6 +13,22 @@ order: 2
 npm install @virio/sdk
 ```
 
+## Entry points
+
+One package, several entrypoints — import only what your stack needs:
+
+| Import | What it gives you |
+| --- | --- |
+| `@virio/sdk` | The core `Virio` client documented on this page. |
+| `@virio/sdk/react` | Native React components: `<VirioProvider>`, `<VirioButton>`, `useVirio()`. |
+| `@virio/sdk/vue` | Native Vue plugin (`VirioVue`) registering the `<virio-button>` element. |
+| `@virio/sdk/angular` | Native Angular bindings (`defineVirioAngularElements`). |
+| `@virio/sdk/web` | Framework-neutral `<virio-button>` Web Component + `openVirioCheckout()`. |
+| `@virio/sdk/checkout` | Headless `VirioCheckout` controller for fully custom checkout UIs. |
+| `@virio/sdk/node` | Node-only config-file loading: `loadConfig()`, `virioFromConfigFile()`. |
+
+`@virio/sdk/vanilla` remains as a deprecated alias of `/web`. The framework entrypoints are covered in [Drop-in Button](/docs/react-button); the rest of this page documents the core client.
+
 ## Constructing a client
 
 ```ts
@@ -26,7 +42,7 @@ const virio = new Virio({
 });
 ```
 
-You can also build from a config object (`Virio.fromConfig(options)`).
+You can also build from a config object (`Virio.fromConfig(options)`). In Node, `virioFromConfigFile()` from `@virio/sdk/node` builds a client from a `virio.config.json` file (with `VIRIO_RPC_URL` / `VIRIO_PRIVATE_KEY` env overrides) instead of inline options.
 
 ### Options
 
@@ -176,6 +192,34 @@ Cancels a subscription. Callable by the customer **or** the merchant. Returns `H
 
 Deactivates a plan (merchant only). Existing subscriptions are unaffected. Returns `Hash`.
 
+## Prepared transactions
+
+Every write has a `prepare*` counterpart that returns calldata instead of sending it — for wallets the SDK doesn't manage (wagmi `sendTransaction`, safes, batching, agents that inspect before signing). Each returns a `PreparedTransaction`: `{ to, data, value, label, functionName, args }`.
+
+```ts
+virio.plans.prepareCreate(params);
+virio.plans.prepareDeactivate(planId);
+virio.subscriptions.prepareSubscribe(params);
+virio.subscriptions.prepareCancel(subscriptionId);
+virio.subscriptions.prepareCharge(subscriptionId);
+virio.prepareApprove(amount, token?, spender?);
+```
+
+All are pure calldata encoding — no network calls, no wallet needed.
+
+### `prepareCheckout(params, customer?)`
+
+Plans a complete checkout in one call: reads the plan and the customer's current allowance, then returns the exact transaction list to sign — the approval (only if the allowance is short) followed by `subscribe`.
+
+```ts
+const checkout = await virio.subscriptions.prepareCheckout({ planId }, customer);
+checkout.needsApproval;      // boolean
+checkout.subscriptionId;     // computed locally, known before signing
+for (const tx of checkout.transactions) {
+  await walletClient.sendTransaction({ to: tx.to, data: tx.data });
+}
+```
+
 ## Events
 
 `watch()` polls the RPC and invokes your callback with decoded logs. Returns an unsubscribe function. Useful as a local alternative to webhooks in development.
@@ -191,12 +235,18 @@ Event names: `PlanCreated`, `PlanDeactivated`, `Subscribed`, `ChargeExecuted`, `
 
 ## Error handling & retries
 
-The SDK surfaces viem errors directly. Wrap writes and inspect the revert reason to decide whether to retry.
+Configuration and usage mistakes throw typed `VirioError` subclasses with a machine-readable `code` — `MissingWalletError` (`MISSING_WALLET`), `MissingTokenError`, `MissingAccountError`, `MissingContractError`, `EventNotFoundError`. Onchain reverts surface as viem errors; inspect the revert reason to decide whether to retry.
 
 ```ts
+import { VirioError } from "@virio/sdk";
+
 try {
   await virio.subscriptions.charge(subscriptionId);
 } catch (err) {
+  if (err instanceof VirioError) {
+    // client misconfiguration — e.g. MISSING_WALLET: no signer for a write
+    throw err;
+  }
   const msg = String(err);
   if (msg.includes("TooEarlyToCharge")) {
     // not due yet — safe to ignore, retry next tick

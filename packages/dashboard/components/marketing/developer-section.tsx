@@ -10,40 +10,37 @@ const TABS: CodeTab[] = [
     label: "TypeScript",
     language: "ts",
     filename: "billing.ts",
-    code: `import { Virio } from "@virio/sdk";
+    code: `import { Virio, usdc, PERIOD } from "@virio/sdk";
 
 const virio = new Virio({
-  rpcUrl: "https://base-mainnet.g.alchemy.com/v2/Yk3p9_aF2dQ",
-});
-
-// Create a recurring plan
-const plan = await virio.plans.create({
-  name: "Pro plan",
-  price: 49,
-  token: "USDC",
-  interval: "month",
+  contractAddress: "0x9d0e...7f12",
   chain: "base",
+  rpcUrl: process.env.RPC_URL,
+  privateKey: process.env.PRIVATE_KEY,
 });
 
-// Subscribe a customer — they sign once
-const sub = await virio.subscriptions.subscribe({
-  planId: plan.planId,
-  customer: "0x8f3c...2a4c",
-});`,
+// Create a recurring plan — 49 USDC / month
+const { planId } = await virio.plans.create({
+  amount: usdc(49),
+  period: PERIOD.MONTHLY,
+});
+
+// The customer approves once, then subscribes
+await virio.approve(usdc(588));
+const { subscriptionId } =
+  await virio.subscriptions.subscribe({ planId });`,
   },
   {
     label: "React",
     language: "tsx",
     filename: "Checkout.tsx",
-    code: `import { useVirioCheckout } from "@virio/react";
+    code: `import { VirioButton, VirioProvider } from "@virio/sdk/react";
 
 export function Checkout({ planId }: { planId: string }) {
-  const { subscribe, status } = useVirioCheckout(planId);
-
   return (
-    <button onClick={subscribe} disabled={status === "pending"}>
-      {status === "active" ? "Subscribed" : "Subscribe — $49/mo"}
-    </button>
+    <VirioProvider rpcUrl={process.env.NEXT_PUBLIC_RPC_URL!}>
+      <VirioButton planId={planId}>Subscribe — $49/mo</VirioButton>
+    </VirioProvider>
   );
 }`,
   },
@@ -92,7 +89,7 @@ const POINTS = [
   {
     icon: Boxes,
     title: "framework adapters",
-    body: "first-class hooks for react, next.js, and a solidity integration library.",
+    body: "first-class entrypoints for react, vue, angular, and framework-neutral web apps.",
   },
   {
     icon: GitBranch,

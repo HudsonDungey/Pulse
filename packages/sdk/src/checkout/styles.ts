@@ -2,10 +2,10 @@ import type { CSSProperties } from "react";
 
 // Inline style objects keep the SDK drop-in: a merchant adds the component and
 // gets a finished UI with zero CSS imports or Tailwind config. The same object
-// drives both the React modal (`style={...}`) and the vanilla DOM modal
+// drives both the React modal (`style={...}`) and the Web Component DOM modal
 // (`Object.assign(el.style, ...)`), so every value is a CSS string with units —
 // numbers would get an automatic `px` from React but not from the DOM. The
-// `react` import is type-only and erased at build, so the vanilla bundle pulls
+// `react` import is type-only and erased at build, so the web bundle pulls
 // in no React.
 
 export const styles: Record<string, CSSProperties> = {

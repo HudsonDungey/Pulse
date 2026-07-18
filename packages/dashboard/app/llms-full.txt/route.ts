@@ -9,8 +9,11 @@ export function GET() {
   const parts: string[] = [
     "# Virio Documentation",
     "",
-    "Wallet-native recurring stablecoin payments and programmable billing infrastructure.",
-    "100% onchain, public, permissionless. No API keys, no accounts, no hosted services.",
+    "Virio is wallet-native recurring stablecoin payments and programmable billing infrastructure.",
+    "The protocol is non-custodial, onchain, public, and permissionless. Customers authorize spend, and due payments settle directly from customer wallets to merchants.",
+    "",
+    "Primary SDK entrypoints: @virio/sdk (core), native @virio/sdk/react, @virio/sdk/vue, and @virio/sdk/angular, plus @virio/sdk/web, @virio/sdk/checkout, and @virio/sdk/node.",
+    "Current trust status: testnet/pre-launch documentation; no published third-party audit yet.",
     "",
     "---",
     "",

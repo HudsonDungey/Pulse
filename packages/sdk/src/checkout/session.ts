@@ -12,7 +12,7 @@ import {
 // The single connection authority. WalletConnect already keeps one provider
 // singleton (walletconnect.ts); this wraps it in an observable store so every
 // consumer — the React `useVirio` hook and every checkout controller, React or
-// vanilla — reads the same address/chain and reacts to the same wallet events.
+// web adapters read the same address/chain and react to the same wallet events.
 // No second source of truth.
 
 interface SessionState {

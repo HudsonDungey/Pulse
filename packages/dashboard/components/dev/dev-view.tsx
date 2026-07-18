@@ -152,14 +152,13 @@ const EXAMPLE_TABS: CodeTab[] = [
     label: "React",
     language: "tsx",
     filename: "Subscribe.tsx",
-    code: `import { useVirioCheckout } from "@virio/react";
+    code: `import { VirioButton, VirioProvider } from "@virio/sdk/react";
 
 export function Subscribe({ planId }: { planId: string }) {
-  const { subscribe, status } = useVirioCheckout(planId);
   return (
-    <button onClick={subscribe} disabled={status === "pending"}>
-      {status === "active" ? "Subscribed" : "Subscribe — $49/mo"}
-    </button>
+    <VirioProvider rpcUrl={process.env.NEXT_PUBLIC_RPC_URL!}>
+      <VirioButton planId={planId}>Subscribe — $49/mo</VirioButton>
+    </VirioProvider>
   );
 }`,
   },
@@ -167,13 +166,15 @@ export function Subscribe({ planId }: { planId: string }) {
     label: "Next.js",
     language: "ts",
     filename: "app/api/webhooks/route.ts",
-    code: `import { virio } from "@/lib/virio";
+    code: `import { verifyWebhook } from "@virio/sdk";
 
 export async function POST(req: Request) {
-  const event = virio.webhooks.verify(
-    await req.text(),
-    req.headers.get("virio-signature")!,
-  );
+  const payload = await req.text();
+  const signature = req.headers.get("x-virio-signature")!;
+  if (!verifyWebhook(payload, signature, process.env.WEBHOOK_SECRET!)) {
+    return new Response(null, { status: 401 });
+  }
+  const event = JSON.parse(payload);
   if (event.type === "subscription.charged") {
     await grantAccess(event.data.subscriptionId);
   }
@@ -232,7 +233,10 @@ const LIFECYCLE = [
 
 const SDKS = [
   { name: "@virio/sdk", desc: "Core TypeScript SDK", size: "18 kB" },
-  { name: "@virio/react", desc: "React hooks & components", size: "9 kB" },
+  { name: "@virio/sdk/react", desc: "Native React components", size: "9 kB" },
+  { name: "@virio/sdk/vue", desc: "Native Vue plugin", size: "4 kB" },
+  { name: "@virio/sdk/angular", desc: "Native Angular bindings", size: "4 kB" },
+  { name: "@virio/sdk/web", desc: "Framework-neutral Web Component", size: "4 kB" },
   { name: "@virio/contracts", desc: "Solidity interfaces & ABIs", size: "—" },
 ];
 
@@ -313,7 +317,7 @@ export function DevView() {
               {
                 label: "Install",
                 language: "bash",
-                code: "npm install @virio/sdk @virio/react",
+                code: "npm install @virio/sdk",
               },
               {
                 label: "First call",

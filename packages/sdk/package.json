@@ -16,6 +16,21 @@
       "import": "./dist/react/index.js",
       "default": "./dist/react/index.js"
     },
+    "./vue": {
+      "types": "./dist/vue/index.d.ts",
+      "import": "./dist/vue/index.js",
+      "default": "./dist/vue/index.js"
+    },
+    "./angular": {
+      "types": "./dist/angular/index.d.ts",
+      "import": "./dist/angular/index.js",
+      "default": "./dist/angular/index.js"
+    },
+    "./web": {
+      "types": "./dist/web/index.d.ts",
+      "import": "./dist/web/index.js",
+      "default": "./dist/web/index.js"
+    },
     "./vanilla": {
       "types": "./dist/vanilla/index.d.ts",
       "import": "./dist/vanilla/index.js",
@@ -39,6 +54,8 @@
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "typecheck": "tsc --project tsconfig.json --noEmit",
+    "pack:local": "node ./scripts/pack-local.mjs",
+    "test:local": "npm run build && node ./scripts/smoke-local-package.mjs",
     "prepublishOnly": "tsc --project tsconfig.json"
   },
   "dependencies": {

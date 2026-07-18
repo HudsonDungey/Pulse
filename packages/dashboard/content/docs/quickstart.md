@@ -154,7 +154,11 @@ export async function POST(req: Request) {
 
 ## Frontend (React + wagmi)
 
-In the browser, pass the user's connected wallet client instead of a private key. Everything else is identical.
+:::note
+Want the zero-config path? `@virio/sdk/react` ships a native `<VirioButton>` that handles wallet connection, approval, and signing for you — Vue and Angular have native entrypoints too. See [Drop-in Button](/docs/react-button).
+:::
+
+If you already manage wallets with wagmi, pass the user's connected wallet client instead of a private key. Everything else is identical.
 
 ```tsx title="SubscribeButton.tsx"
 "use client";

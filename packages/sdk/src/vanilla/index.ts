@@ -1,13 +1,12 @@
 // ─── @virio/sdk/vanilla ──────────────────────────────────────────────────────
-// Framework-neutral checkout: a <virio-button> Web Component (works in plain
-// HTML, Vue, Svelte, Angular, Solid) plus an imperative openVirioCheckout().
-// Importing this entry registers <virio-button> automatically.
+// Deprecated alias for @virio/sdk/web. Kept so existing integrations continue
+// working while new apps import @virio/sdk/web, /vue, /angular, or /react.
 
-import { defineVirioButton } from "./element.js";
+import { defineVirioButton } from "../web/element.js";
 
-export { defineVirioButton } from "./element.js";
-export { openVirioCheckout } from "./checkout.js";
-export type { OpenCheckoutOptions } from "./checkout.js";
+export { defineVirioButton } from "../web/element.js";
+export { openVirioCheckout } from "../web/checkout.js";
+export type { OpenCheckoutOptions } from "../web/checkout.js";
 
 // Re-export the headless core for advanced/custom UIs.
 export { VirioCheckout } from "../checkout/controller.js";
@@ -19,5 +18,5 @@ export type {
 } from "../checkout/controller.js";
 export type { PlanSummary } from "../checkout/transaction.js";
 
-// Auto-register so `import "@virio/sdk/vanilla"` is enough in plain HTML.
+// Auto-register so legacy `import "@virio/sdk/vanilla"` still works.
 defineVirioButton();

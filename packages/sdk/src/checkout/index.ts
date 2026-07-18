@@ -1,5 +1,5 @@
 // ─── Headless checkout core ──────────────────────────────────────────────────
-// Framework-agnostic building blocks shared by every binding (React, vanilla
+// Framework-agnostic building blocks shared by every binding (React, web
 // Web Component, or your own). No React, no DOM-render assumptions.
 
 export { VirioCheckout } from "./controller.js";

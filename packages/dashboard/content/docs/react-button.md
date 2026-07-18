@@ -1,6 +1,6 @@
 ---
 title: Drop-in Button
-description: Add crypto subscriptions with one component — React, a framework-neutral Web Component, or plain JS. WalletConnect, plan lookup, approvals and signing handled for you.
+description: Add crypto subscriptions with one component — native React, Vue, and Angular entrypoints, plus a Web Component for plain HTML. WalletConnect, plan lookup, approvals and signing handled for you.
 section: Build
 order: 3
 ---
@@ -95,23 +95,45 @@ const { connected, address, chainId, connect, disconnect } = useVirio();
 
 The modal is a labelled dialog with focus trapping, `Esc` to close, full keyboard navigation and reduced-motion support.
 
-## Other frameworks & vanilla JS
+## Vue and Angular
 
-React is just one binding. The whole flow — WalletConnect, plan lookup, approvals and signing — lives in a framework-agnostic controller, exposed through `@virio/sdk/vanilla` as a **Web Component** and an **imperative function**. No React, no build framework required.
+React is one of three native entrypoints. `@virio/sdk/vue` and `@virio/sdk/angular` ship the same checkout — WalletConnect, plan lookup, approvals and signing — as a `<virio-button>` element with framework-specific setup, so each framework imports its own entrypoint rather than a generic shim.
 
-### Web Component (Vue, Svelte, Angular, Solid, plain HTML)
+### Vue — `@virio/sdk/vue`
 
-Custom elements work natively in every framework, so one tag covers them all:
+Install the plugin once. It registers `<virio-button>` and teaches Vue's compiler that it is a custom element, so you get no unknown-component warnings:
 
-```html
-<script type="module">
-  import "@virio/sdk/vanilla"; // registers <virio-button>
-</script>
+```ts
+import { createApp } from "vue";
+import { VirioVue } from "@virio/sdk/vue";
 
-<virio-button rpc-url="https://…" plan-id="0x123…">Subscribe with Crypto</virio-button>
+createApp(App).use(VirioVue).mount("#app");
 ```
 
-Attributes map to props: `rpc-url`, `plan-id`, `chain`, `contract-address`, `project-id`, `app-name`, `auto-connect`, `auto-sign`. Results surface as bubbling `CustomEvent`s:
+```vue
+<virio-button :rpc-url="rpcUrl" :plan-id="planId">Subscribe with Crypto</virio-button>
+```
+
+Prefer no plugin? A side-effect import (`import "@virio/sdk/vue"`) registers the element on its own.
+
+### Angular — `@virio/sdk/angular`
+
+Register the element at bootstrap and add `CUSTOM_ELEMENTS_SCHEMA` to any component that renders `<virio-button>`:
+
+```ts
+import { CUSTOM_ELEMENTS_SCHEMA } from "@angular/core";
+import { defineVirioAngularElements } from "@virio/sdk/angular";
+
+defineVirioAngularElements();
+```
+
+```html
+<virio-button [attr.rpc-url]="rpcUrl" [attr.plan-id]="planId">Subscribe with Crypto</virio-button>
+```
+
+### Element attributes & events
+
+In both frameworks (and in plain HTML below), attributes map to the React props: `rpc-url`, `plan-id`, `chain`, `contract-address`, `project-id`, `app-name`, `auto-connect`, `auto-sign`. Results surface as bubbling `CustomEvent`s:
 
 ```js
 const btn = document.querySelector("virio-button");
@@ -120,14 +142,26 @@ btn.addEventListener("virio:error", (e) => console.error(e.detail));
 // also: virio:connect (address), virio:pending (txHash)
 ```
 
-It is a normal element in any framework — `<virio-button :plan-id="id" />` in Vue, `<virio-button {planId} />`-style in Svelte, etc. Angular needs `CUSTOM_ELEMENTS_SCHEMA`.
+## Plain HTML & other frameworks
+
+`@virio/sdk/web` exposes the same `<virio-button>` for anything without a native entrypoint — plain HTML, Svelte, Solid, or any framework that renders custom elements:
+
+```html
+<script type="module">
+  import "@virio/sdk/web"; // registers <virio-button>
+</script>
+
+<virio-button rpc-url="https://…" plan-id="0x123…">Subscribe with Crypto</virio-button>
+```
+
+`@virio/sdk/vanilla` still works as a deprecated alias of `@virio/sdk/web`; new integrations should import `/web`.
 
 ### Imperative API (any JS)
 
-Open the checkout from your own button or logic:
+Open the checkout from your own button or logic — exported from `/web`, `/vue`, and `/angular` alike:
 
 ```ts
-import { openVirioCheckout } from "@virio/sdk/vanilla";
+import { openVirioCheckout } from "@virio/sdk/web";
 
 openVirioCheckout({
   rpcUrl: "https://…",

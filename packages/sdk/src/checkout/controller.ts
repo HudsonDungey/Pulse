@@ -13,7 +13,7 @@ import { toDataUrl } from "./qr.js";
 
 // The framework-agnostic checkout engine. It owns the whole flow — connect,
 // load plan, switch chain, approve + subscribe — as an observable state machine
-// with zero rendering opinions. React and the vanilla Web Component are each a
+// with zero rendering opinions. React and the Web Component adapters are each a
 // thin view that subscribes to `getState()` and calls `connect/sign/retry`.
 
 export type CheckoutStatus =
